@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图压压 · 免费在线图片压缩</title>
+<meta name="description" content="免费在线图片压缩工具：拖拽上传、质量可调、压缩前后大小对比，全部在浏览器本地完成，不上传服务器。">
+<style>
+  :root{
+    --bg:#f5f6fa; --card:#ffffff; --ink:#1f2430; --sub:#6b7280;
+    --brand:#4f6df5; --brand-dark:#3b54c9; --ok:#16a34a; --line:#e5e7eb;
+    --danger:#dc2626; --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg); color:var(--ink); line-height:1.6; padding:24px 16px 64px;}
+  .wrap{max-width:880px; margin:0 auto;}
+  header{text-align:center; margin-bottom:24px;}
+  header h1{font-size:32px; letter-spacing:1px;}
+  header h1 .logo{color:var(--brand);}
+  header p{color:var(--sub); font-size:15px; margin-top:6px;}
+  .badge{display:inline-block; background:#eef1fe; color:var(--brand-dark);
+         font-size:12px; padding:2px 10px; border-radius:999px; margin-top:8px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+        padding:20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(16,24,40,.04);}
+  /* 上传区 */
+  #dropZone{border:2px dashed #c3cad9; border-radius:var(--radius); padding:44px 20px;
+            text-align:center; cursor:pointer; transition:all .15s; background:#fbfcfe;}
+  #dropZone:hover{border-color:var(--brand);}
+  #dropZone.dragover{border-color:var(--brand); background:#eef1fe;}
+  #dropZone .big{font-size:18px; font-weight:600;}
+  #dropZone .small{color:var(--sub); font-size:13px; margin-top:4px;}
+  #dropZone .icon{font-size:40px; margin-bottom:8px;}
+  input[type=file]{display:none;}
+  /* 控制区 */
+  .controls{display:grid; grid-template-columns:1fr 1fr; gap:16px 28px;}
+  @media (max-width:640px){.controls{grid-template-columns:1fr;}}
+  .ctl label{display:flex; justify-content:space-between; font-size:14px; font-weight:600; margin-bottom:6px;}
+  .ctl label output{color:var(--brand-dark); font-variant-numeric:tabular-nums;}
+  .ctl .hint{font-size:12px; color:var(--sub); margin-top:4px;}
+  input[type=range]{width:100%; accent-color:var(--brand); height:28px;}
+  select,input[type=number]{width:100%; padding:8px 10px; border:1px solid var(--line);
+        border-radius:8px; font-size:14px; background:#fff; color:var(--ink);}
+  .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
+  button{border:none; border-radius:9px; padding:10px 20px; font-size:15px; cursor:pointer;
+         font-weight:600; transition:background .15s;}
+  .btn-primary{background:var(--brand); color:#fff;}
+  .btn-primary:hover{background:var(--brand-dark);}
+  .btn-primary:disabled{background:#aab6e8; cursor:not-allowed;}
+  .btn-ghost{background:#fff; color:var(--ink); border:1px solid var(--line);}
+  .btn-ghost:hover{background:#f3f4f6;}
+  .btn-ghost:disabled{color:#9ca3af; cursor:not-allowed;}
+  /* 汇总 */
+  #summary{display:none; font-size:15px;}
+  #summary b{font-variant-numeric:tabular-nums;}
+  #summary .save{color:var(--ok); font-weight:700;}
+  /* 列表 */
+  #list{display:flex; flex-direction:column; gap:12px;}
+  .item{display:flex; gap:14px; align-items:center; border:1px solid var(--line);
+        border-radius:12px; padding:12px; background:#fff;}
+  .item img.thumb{width:76px; height:76px; object-fit:cover; border-radius:8px; background:#f3f4f6; flex:none;}
+  .item .meta{flex:1; min-width:0;}
+  .item .name{font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .item .sizes{font-size:13px; color:var(--sub); font-variant-numeric:tabular-nums;}
+  .item .sizes .new{color:var(--ink); font-weight:600;}
+  .item .sizes .pct{color:var(--ok); font-weight:700;}
+  .item .sizes .bigger{color:var(--danger); font-weight:700;}
+  .item .status{font-size:12px; color:var(--sub);}
+  .item .dl{flex:none;}
+  .item .dl button{padding:8px 14px; font-size:13px;}
+  .empty{color:var(--sub); text-align:center; font-size:14px; padding:8px 0;}
+  footer{text-align:center; color:var(--sub); font-size:12px; margin-top:28px;}
+  .ad-slot{border:1px dashed var(--line); border-radius:var(--radius); color:#9ca3af;
+           text-align:center; padding:14px; font-size:12px; margin-bottom:16px; background:#fff;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="logo">图压压</span> · 图片压缩</h1>
+    <p>把图片拖进来就能压，全部在你自己的浏览器里完成，不上传服务器。</p>
+    <span class="badge">免费 · 无需注册 · 不限制张数</span>
+  </header>
+
+  <!-- 广告位占位（上线后替换为广告代码） -->
+  <div class="ad-slot">广告位（728×90，上线后接入）</div>
+
+  <div class="card">
+    <div id="dropZone" role="button" tabindex="0" aria-label="上传图片">
+      <div class="icon">🖼️</div>
+      <div class="big">把图片拖到这里，或点击选择文件</div>
+      <div class="small">支持 JPG / PNG / WebP / GIF / BMP，可一次选多张</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" multiple>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <div class="ctl">
+        <label>压缩质量 <output id="qualityOut">80%</output></label>
+        <input type="range" id="quality" min="10" max="100" step="1" value="80">
+        <div class="hint">质量越低文件越小。照片推荐 70–85%，兼顾清晰和体积。</div>
+      </div>
+      <div class="ctl">
+        <label>输出格式</label>
+        <select id="format">
+          <option value="auto" selected>自动（有透明通道存 PNG，否则 JPG）</option>
+          <option value="image/jpeg">JPG（体积最小，照片首选）</option>
+          <option value="image/webp">WebP（同画质比 JPG 再小约 25%）</option>
+          <option value="image/png">PNG（无损，适合截图和图标）</option>
+        </select>
+        <div class="hint">选 PNG 时质量滑杆不生效（无损格式）。</div>
+      </div>
+      <div class="ctl">
+        <label>最大宽度（像素，0 = 不限制）</label>
+        <input type="number" id="maxWidth" min="0" step="10" value="0">
+        <div class="hint">例如发小红书可设 1080；等比缩放，不拉伸。</div>
+      </div>
+      <div class="ctl">
+        <label>最大高度（像素，0 = 不限制）</label>
+        <input type="number" id="maxHeight" min="0" step="10" value="0">
+        <div class="hint">宽高都设时按更紧的那个等比缩小，永不放大。</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="compressBtn" disabled>开始压缩</button>
+      <button class="btn-ghost" id="downloadAllBtn" disabled>全部下载</button>
+      <button class="btn-ghost" id="clearBtn" disabled>清空列表</button>
+    </div>
+  </div>
+
+  <div class="card" id="summary"></div>
+
+  <div id="list"><div class="empty">还没有图片，先拖几张进来试试。</div></div>
+
+  <footer>图压压原型版 · 所有处理均在本地浏览器完成，图片不会离开你的设备。</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var dropZone   = document.getElementById('dropZone');
+  var fileInput  = document.getElementById('fileInput');
+  var qualityEl  = document.getElementById('quality');
+  var qualityOut = document.getElementById('qualityOut');
+  var formatEl   = document.getElementById('format');
+  var maxWidthEl = document.getElementById('maxWidth');
+  var maxHeightEl= document.getElementById('maxHeight');
+  var compressBtn= document.getElementById('compressBtn');
+  var downloadAllBtn = document.getElementById('downloadAllBtn');
+  var clearBtn   = document.getElementById('clearBtn');
+  var listEl     = document.getElementById('list');
+  var summaryEl  = document.getElementById('summary');
+
+  // 每条记录: {id, file, name, origSize, origUrl, width, height,
+  //            resultBlob, resultUrl, resultSize, outWidth, outHeight, status, el...}
+  var items = [];
+  var nextId = 1;
+
+  function fmtSize(bytes){
+    if (bytes == null) return '—';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/(1024*1024)).toFixed(2) + ' MB';
+  }
+
+  function extFor(mime){
+    if (mime === 'image/jpeg') return '.jpg';
+    if (mime === 'image/webp') return '.webp';
+    if (mime === 'image/png')  return '.png';
+    return '.jpg';
+  }
+
+  function outName(name, mime){
+    var dot = name.lastIndexOf('.');
+    var base = dot > 0 ? name.slice(0, dot) : name;
+    return base + '-compressed' + extFor(mime);
+  }
+
+  // ---------- 上传 ----------
+  dropZone.addEventListener('click', function(){ fileInput.click(); });
+  dropZone.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fileInput.click(); }
+  });
+  fileInput.addEventListener('change', function(){
+    addFiles(fileInput.files);
+    fileInput.value = ''; // 允许重复选同一文件
+  });
+  ['dragenter','dragover'].forEach(function(ev){
+    dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.add('dragover'); });
+  });
+  ['dragleave','drop'].forEach(function(ev){
+    dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.remove('dragover'); });
+  });
+  dropZone.addEventListener('drop', function(e){
+    if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+  });
+  // 整页粘贴图片也可添加
+  document.addEventListener('paste', function(e){
+    if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length){
+      addFiles(e.clipboardData.files);
+    }
+  });
+
+  function addFiles(fileList){
+    var added = 0;
+    Array.prototype.forEach.call(fileList, function(file){
+      if (!file.type || file.type.indexOf('image/') !== 0) return; // 只收图片
+      var item = {
+        id: nextId++, file: file, name: file.name || ('pasted-' + nextId + '.png'),
+        origSize: file.size, origUrl: URL.createObjectURL(file),
+        width: 0, height: 0,
+        resultBlob: null, resultUrl: null, resultSize: null,
+        outMime: null, outWidth: 0, outHeight: 0, status: '待压缩'
+      };
+      items.push(item);
+      renderItem(item);
+      added++;
+    });
+    if (added > 0) refreshUI();
+  }
+
+  // ---------- 列表渲染 ----------
+  function renderItem(item){
+    var empty = listEl.querySelector('.empty');
+    if (empty) empty.remove();
+
+    var row = document.createElement('div');
+    row.className = 'item';
+    row.id = 'item-' + item.id;
+
+    var img = document.createElement('img');
+    img.className = 'thumb'; img.src = item.origUrl; img.alt = item.name;
+
+    var meta = document.createElement('div');
+    meta.className = 'meta';
+    var nameDiv = document.createElement('div');
+    nameDiv.className = 'name'; nameDiv.textContent = item.name;
+    var sizesDiv = document.createElement('div');
+    sizesDiv.className = 'sizes';
+    var statusDiv = document.createElement('div');
+    statusDiv.className = 'status'; statusDiv.textContent = item.status;
+    meta.appendChild(nameDiv); meta.appendChild(sizesDiv); meta.appendChild(statusDiv);
+
+    var dlWrap = document.createElement('div');
+    dlWrap.className = 'dl';
+    var dlBtn = document.createElement('button');
+    dlBtn.className = 'btn-primary'; dlBtn.textContent = '下载'; dlBtn.disabled = true;
+    dlBtn.addEventListener('click', function(){ downloadItem(item); });
+    dlWrap.appendChild(dlBtn);
+
+    row.appendChild(img); row.appendChild(meta); row.appendChild(dlWrap);
+    listEl.appendChild(row);
+
+    item._sizesEl = sizesDiv; item._statusEl = statusDiv; item._dlBtn = dlBtn;
+    updateItemRow(item);
+  }
+
+  function updateItemRow(item){
+    if (!item._sizesEl) return;
+    var html = '原图 ' + fmtSize(item.origSize);
+    if (item.width) html += ' · ' + item.width + '×' + item.height;
+    if (item.resultSize != null){
+      var pct = Math.round((1 - item.resultSize / item.origSize) * 100);
+      html += ' &nbsp;→&nbsp; <span class="new">' + fmtSize(item.resultSize) + '</span>';
+      if (item.outWidth) html += ' · ' + item.outWidth + '×' + item.outHeight;
+      if (pct > 0)       html += ' &nbsp;<span class="pct">省 ' + pct + '%</span>';
+      else if (pct < 0)  html += ' &nbsp;<span class="bigger">反而大 ' + (-pct) + '%（原图已很小，可调低质量再试）</span>';
+      else               html += ' &nbsp;大小基本不变';
+    }
+    item._sizesEl.innerHTML = html;
+    item._statusEl.textContent = item.status;
+    item._dlBtn.disabled = !item.resultBlob;
+  }
+
+  function refreshUI(){
+    var has = items.length > 0;
+    var done = items.some(function(i){ return !!i.resultBlob; });
+    compressBtn.disabled = !has;
+    clearBtn.disabled = !has;
+    downloadAllBtn.disabled = !done;
+    renderSummary();
+  }
+
+  function renderSummary(){
+    var doneItems = items.filter(function(i){ return i.resultSize != null; });
+    if (!doneItems.length){ summaryEl.style.display = 'none'; return; }
+    var orig = 0, out = 0;
+    doneItems.forEach(function(i){ orig += i.origSize; out += i.resultSize; });
+    var pct = orig > 0 ? Math.round((1 - out / orig) * 100) : 0;
+    summaryEl.style.display = 'block';
+    summaryEl.innerHTML = '已压缩 <b>' + doneItems.length + '</b> 张：原图共 <b>' + fmtSize(orig) +
+      '</b> → 压缩后 <b>' + fmtSize(out) + '</b>' +
+      (pct > 0 ? '，共省下 <span class="save">' + fmtSize(orig - out) + '（' + pct + '%）</span>' : '');
+  }
+
+  // ---------- 压缩核心 ----------
+  function loadImage(url){
+    return new Promise(function(resolve, reject){
+      var img = new Image();
+      img.onload = function(){ resolve(img); };
+      img.onerror = function(){ reject(new Error('图片读取失败')); };
+      img.src = url;
+    });
+  }
+
+  function canvasToBlob(canvas, mime, q){
+    return new Promise(function(resolve){
+      if (canvas.toBlob){
+        canvas.toBlob(function(b){ resolve(b); }, mime, q);
+      } else {
+        // 极老浏览器兜底
+        var dataUrl = canvas.toDataURL(mime, q);
+        var bin = atob(dataUrl.split(',')[1]);
+        var arr = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        resolve(new Blob([arr], {type: mime}));
+      }
+    });
+  }
+
+  // 判断图片是否有透明像素（采样检测），用于“自动”格式选择
+  function hasTransparency(ctx, w, h){
+    try {
+      var step = Math.max(1, Math.floor(Math.min(w, h) / 40));
+      var data = ctx.getImageData(0, 0, w, h).data;
+      for (var y = 0; y < h; y += step){
+        for (var x = 0; x < w; x += step){
+          if (data[(y * w + x) * 4 + 3] < 250) return true;
+        }
+      }
+    } catch (e) { /* 读取失败则按无透明处理 */ }
+    return false;
+  }
+
+  function compressItem(item, opts){
+    return loadImage(item.origUrl).then(function(img){
+      item.width = img.naturalWidth; item.height = img.naturalHeight;
+
+      var scale = 1;
+      if (opts.maxWidth  > 0) scale = Math.min(scale, opts.maxWidth  / item.width);
+      if (opts.maxHeight > 0) scale = Math.min(scale, opts.maxHeight / item.height);
+      if (scale > 1) scale = 1; // 永不放大
+      var outW = Math.max(1, Math.round(item.width  * scale));
+      var outH = Math.max(1, Math.round(item.height * scale));
+
+      var canvas = document.createElement('canvas');
+      canvas.width = outW; canvas.height = outH;
+      var ctx = canvas.getContext('2d');
+
+      // 先绘制到 canvas，之后才能按真实像素判断有没有透明通道
+      ctx.drawImage(img, 0, 0, outW, outH);
+
+      var mime = opts.format;
+      if (mime === 'auto'){
+        mime = (item.file.type === 'image/png' && hasTransparency(ctx, outW, outH))
+          ? 'image/png' : 'image/jpeg';
+        if (mime === 'image/jpeg'){
+          // JPG 不支持透明：重绘到白底上，避免透明区变黑
+          var c2 = document.createElement('canvas');
+          c2.width = outW; c2.height = outH;
+          var ctx2 = c2.getContext('2d');
+          ctx2.fillStyle = '#ffffff'; ctx2.fillRect(0, 0, outW, outH);
+          ctx2.drawImage(img, 0, 0, outW, outH);
+          canvas = c2;
+        }
+      } else if (mime === 'image/jpeg'){
+        var c3 = document.createElement('canvas');
+        c3.width = outW; c3.height = outH;
+        var ctx3 = c3.getContext('2d');
+        ctx3.fillStyle = '#ffffff'; ctx3.fillRect(0, 0, outW, outH);
+        ctx3.drawImage(img, 0, 0, outW, outH);
+        canvas = c3;
+      }
+
+      var q = (mime === 'image/png') ? undefined : opts.quality;
+      return canvasToBlob(canvas, mime, q).then(function(blob){
+        if (!blob) throw new Error('压缩失败');
+        if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
+        item.resultBlob = blob;
+        item.resultSize = blob.size;
+        item.resultUrl  = URL.createObjectURL(blob);
+        item.outMime = mime; item.outWidth = outW; item.outHeight = outH;
+        item.status = '已压缩';
+        updateItemRow(item);
+      });
+    }).catch(function(err){
+      item.status = '失败：' + (err && err.message ? err.message : '未知错误');
+      updateItemRow(item);
+    });
+  }
+
+  compressBtn.addEventListener('click', function(){
+    var opts = {
+      quality: parseInt(qualityEl.value, 10) / 100,
+      format: formatEl.value,
+      maxWidth: parseInt(maxWidthEl.value, 10) || 0,
+      maxHeight: parseInt(maxHeightEl.value, 10) || 0
+    };
+    compressBtn.disabled = true;
+    compressBtn.textContent = '压缩中…';
+    var chain = Promise.resolve();
+    items.forEach(function(item){
+      item.status = '压缩中…'; updateItemRow(item);
+      chain = chain.then(function(){ return compressItem(item, opts); });
+    });
+    chain.then(function(){
+      compressBtn.disabled = false;
+      compressBtn.textContent = '开始压缩';
+      refreshUI();
+    });
+  });
+
+  // 参数变化后，旧结果标注为过期（提示重新压缩）
+  [qualityEl, formatEl, maxWidthEl, maxHeightEl].forEach(function(el){
+    el.addEventListener('change', function(){
+      items.forEach(function(item){
+        if (item.resultBlob){ item.status = '参数已改，点「开始压缩」更新结果'; updateItemRow(item); }
+      });
+    });
+  });
+  qualityEl.addEventListener('input', function(){
+    qualityOut.textContent = qualityEl.value + '%';
+  });
+
+  // ---------- 下载 ----------
+  function downloadItem(item){
+    if (!item.resultUrl) return;
+    var a = document.createElement('a');
+    a.href = item.resultUrl;
+    a.download = outName(item.name, item.outMime || 'image/jpeg');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  downloadAllBtn.addEventListener('click', function(){
+    var delay = 0;
+    items.forEach(function(item){
+      if (!item.resultBlob) return;
+      setTimeout(function(){ downloadItem(item); }, delay);
+      delay += 350; // 错开触发，避免浏览器拦截多文件下载
+    });
+  });
+
+  clearBtn.addEventListener('click', function(){
+    items.forEach(function(item){
+      URL.revokeObjectURL(item.origUrl);
+      if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
+    });
+    items = [];
+    listEl.innerHTML = '<div class="empty">还没有图片，先拖几张进来试试。</div>';
+    refreshUI();
+  });
+
+  refreshUI();
+})();
+</script>
+</body>
+</html>
